@@ -195,6 +195,11 @@ ip route add 192.168.20.0/24 via 192.168.53.88 dev tun0
 ### Tarea 3.2
 Bypassing Egress Firewall
 
+> **Warning**
+> Volver a lanzar los contenedores para resetear la configuración de red del apartado 3.1
+
+```bash
+
 `A`: VPN Server
 `B`: VPN Client 
 
@@ -202,6 +207,7 @@ Bypassing Egress Firewall
 iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
 ```
 
+A(server) -> B(client)
 ```bash
 ssh -w 0:0 root@10.8.0.99 \
     -o "PermitLocalCommand=yes" \
@@ -211,7 +217,15 @@ ssh -w 0:0 root@10.8.0.99 \
     ip link set tun0 up"
 ```
 
+En el lado del cliente:
+```
+ip route add 52.142.124.215 dev tun0
+```
+
+En el lado del servidor:
+```
 iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
+```
 
 ## Tarea 4
 Comparing SOCKS5 Proxy and VPN
