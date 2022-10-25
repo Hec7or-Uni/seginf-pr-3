@@ -162,8 +162,56 @@ Virtual Private Network (VPN)
 ### Tarea 3.1
 Bypassing Ingress Firewall
 
+Lanzar el túnel para saltar el firewall en el cliente VPN:
+A(client) -> B(server)
+```bash
+ssh -w 0:0 root@192.168.20.99\
+    -o "PermitLocalCommand=yes" \
+    -o "LocalCommand= ip addr add 192.168.53.88/24 dev tun0 && \
+    ip link set tun0 up" \
+    -o "RemoteCommand=ip addr add 192.168.53.99/24 dev tun0 && \
+    ip link set tun0 up"
+```
+
+En el lado del cliente:
+```bash
+ip route replace 192.168.20.0/24 via 192.168.53.88 dev tun0
+ip route add 192.168.20.99 via 10.8.0.11
+```
+
+En el lado del servidor:
+```bash
+iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
+```
+
+```
+telnet 192.168.53.88
+```
+
+```bash
+ip route add 192.168.20.0/24 via 192.168.53.88 dev tun0
+```
+
 ### Tarea 3.2
 Bypassing Egress Firewall
+
+`A`: VPN Server
+`B`: VPN Client 
+
+```bash	
+iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
+```
+
+```bash
+ssh -w 0:0 root@10.8.0.99 \
+    -o "PermitLocalCommand=yes" \
+    -o "LocalCommand=ip addr add 192.168.53.88/24 dev tun0 && \
+    ip link set tun0 up" \
+    -o "RemoteCommand=ip addr add 192.168.53.99/24 dev tun0 && \
+    ip link set tun0 up"
+```
+
+iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
 
 ## Tarea 4
 Comparing SOCKS5 Proxy and VPN
