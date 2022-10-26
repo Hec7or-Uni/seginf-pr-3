@@ -6,15 +6,18 @@ author_2: "Darío Marcos Casalé (795306)"
 
 # Firewall Evasion
 
-## Tarea 0
+## Requisitos
 Lab Setup
 
 ![network](https://github.com/Hec7or-Uni/seginf-pr-3/blob/main/assets/lab.png)
 
-En primer lugar se ha comprobado si el gateway de salida del tráfico a internet está asociado al interfaz eth0. Para ello se ha entrado en la máquina que actúa como router/firewall:
+En primer lugar se ha comprobado si el gateway de salida del tráfico a internet está asociado al interfaz eth0. Para ello se ha entrado en la máquina que actúa como router/firewall mediante el comando:
+
 ```bash
 docker exec -ti <id> bash
 ```
+
+Una vez dentro, se ha comprobado la correcta configuración del gateway de salida mediante el comando:
 
 ```
 root@7d6166b19dfa:/# ip -br address
@@ -23,17 +26,18 @@ eth1@if24        UP             192.168.20.11/24
 eth0@if26        UP             10.8.0.11/24 
 ```
 
-- [x] eth0 is the interface connected to the 10.8.0.0/24 network
-- [x] eth1 is the one connected to 192.168.20.0/24.
+- [x] eth0 es la interfaz conectada a la red 10.8.0.0/24
+- [x] eth1 es la interfaz conectada a la red 192.168.20.0/24.
 
-> **Note**: ¿ Añadir CIDR para bloquear una red entera o basta con bloquear una IP ?
+Además de bloquear `www.example.com` se han añadido 2 reglas de iptables para bloquear el tráfico a `google.com` y `duckduckgo.com`:
 
 ```bash
 iptables -A FORWARD -i eth1 -d 142.250.217.78 -j DROP # google.com
 iptables -A FORWARD -i eth1 -d 40.89.244.232 -j DROP  # duckduckgo.com
 ```
 
-Para comprobar el bloqueo del tráfico basta con entrar a una de las máquinas de la red B e intentar hacer ping a las IP bloqueadas. Como era de esperar, el ping no llega a resolverse
+Para comprobar el bloqueo del tráfico basta con entrar a una de las máquinas de la red B e intentar hacer ping a las IP bloqueadas. Como era de esperar, el ping no llega a resolverse.
+
 ```
 root@a26cecbc2fd5:/# ping 142.250.217.78 -c 1
 PING 142.250.217.78 (142.250.217.78) 56(84) bytes of data.
@@ -45,16 +49,26 @@ PING 142.250.217.78 (142.250.217.78) 56(84) bytes of data.
 ## Tarea 1
 Static Port Forwarding
 
-Ejecutamos el siguiente comando en la máquina A
+La técnica de `static port forwarding` consiste en redirigir el tráfico de un puerto de la red interna a un puerto de la red externa. Para ello, se ha creado un tunel SSH entre la máquina A y la máquina B. Para ello, se ha ejecutado el siguiente comando en la máquina A:
+
 ```bash
 ssh -4NT -L 0.0.0.0:<port>:192.168.20.5:23 seed@192.168.20.99
 ```
 
-How many TCP connections are involved in this entire process
+### Pregunta 1
+Cuántas conexiones TCP hay en todo este proceso.
 
-```bash	
-tcpdump -i eth0 'tcp[13] &2 != 0' -n -s 0 -w output.pcap
+Mediante la herramienta `tcpdump` se ha podido comprobar el número de conexiones TCP que se establecen durante el proceso de `static port forwarding`. Tras ejecutar el comando `tcpdump` en la máquina A, se ha podido comprobar que se establecen 2 conexiones TCP:
+
 ```
+root@378ae553ce7f:/# tcpdump -i eth0 'tcp[13] &2 != 0'
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
+22:31:07.622591 IP A-10.8.0.99.net-10.8.0.0.41490 > B-192.168.20.99.net-192.168.20.0.ssh: Flags [S], seq 4005893999, win 64240, options [mss 1460,sackOK,TS val 402824571 ecr 0,nop,wscale 7], length 0
+22:31:07.622840 IP B-192.168.20.99.net-192.168.20.0.ssh > A-10.8.0.99.net-10.8.0.0.41490: Flags [S.], seq 3721002126, ack 4005894000, win 65160, options [mss 1460,sackOK,TS val 3505122926 ecr 402824571,nop,wscale 7], length 0
+```
+
+A continuación se ha ejecutado un telnet a localhost para comprobar que el tunel SSH funciona correctamente y consigue conectarse a la maquina B1
 
 ```bash
 [10/19/22]seed@VM:~/.../Labsetup$ telnet localhost <port>
@@ -66,16 +80,11 @@ e49005169f2e login: seed
 Password: ****
 ```
 
-```
-root@378ae553ce7f:/# tcpdump -i eth0 'tcp[13] &2 != 0'
-tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
-listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
-22:31:07.622591 IP A-10.8.0.99.net-10.8.0.0.41490 > B-192.168.20.99.net-192.168.20.0.ssh: Flags [S], seq 4005893999, win 64240, options [mss 1460,sackOK,TS val 402824571 ecr 0,nop,wscale 7], length 0
-22:31:07.622840 IP B-192.168.20.99.net-192.168.20.0.ssh > A-10.8.0.99.net-10.8.0.0.41490: Flags [S.], seq 3721002126, ack 4005894000, win 65160, options [mss 1460,sackOK,TS val 3505122926 ecr 402824571,nop,wscale 7], length 0
-```
+### Pregunta 2
 
-Why can this tunnel successfully help users evade the firewall rule specified in the lab setup?<br>
-This can be helpful because the user can access the machine in the internal network without having to go through the firewall. This is because the user is connecting to the machine in the internal network through the SSH tunnel.
+¿Por qué este túnel puede ayudar con éxito a los usuarios a evadir la regla del cortafuegos especificada en la configuración del laboratorio?
+
+Esto puede ser útil porque el usuario puede acceder a la máquina en la red interna sin tener que pasar por el firewall. Esto se debe a que el usuario se conecta a la máquina en la red interna a través del túnel SSH.
 
 ## Tarea 2
 Dynamic Port Forwarding
@@ -83,18 +92,19 @@ Dynamic Port Forwarding
 ### Tarea 2.1
 Setting Up Dynamic Port Forwarding
 
-Ejecutamos el siguiente comando en la máquina B para activar la redirección de puertos dinámica
+Para activar el `dynamic port forwarding` se ha ejecutado el siguiente comando en la máquina B:
+
 ```bash
 ssh -4NT -D 0.0.0.0:4444 seed@10.8.0.99
 ```
 
-Si ahora intentamos acceder a la página de google desde la máquina A, se puede ver que no nos llega el trafico debido a que no hemos usado el proxy SOCKS5
+Si ahora intentamos acceder a la página de google desde la máquina A, se puede ver que no nos llega el trafico debido a que **no** hemos usado el **proxy SOCKS5**
 ```
 root@a26cecbc2fd5:/# curl 40.89.244.232 -m 3
 curl: (28) Connection timed out after 3001 milliseconds
 ```
 
-Al usar el proxy SOCKS5, el tráfico se redirige correctamente
+Al usar el **proxy SOCKS5**, el tráfico se redirige correctamente
 ```
 root@a26cecbc2fd5:/# curl --proxy socks5h://192.168.20.99:4444 40.89.244.232
 <html>
@@ -108,10 +118,14 @@ root@a26cecbc2fd5:/# curl --proxy socks5h://192.168.20.99:4444 40.89.244.232
 
 --- 
 
-Para demostrar que el mismo comando falla en caso de que el túnel no esté definido, a continuación se incluye el resultado antes y después de establecer el túnel entre B y A:
-```bash
+Para demostrar que no se permite el tráfico a menos que tengamos el tunel entre A y B establecido, se han ejecutado los siguientes comandos en la máquina A:
+
+```
 root@8f394f60982b:/$ curl --proxy socks5h://192.168.20.99:4444 google.com
 curl: (7) Failed to connect to 192.168.20.99 port 4444: Connection refused
+```
+
+```
 root@8f394f60982b:/$ curl --proxy socks5h://192.168.20.99:4444 google.com
 <HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
 <TITLE>301 Moved</TITLE></HEAD><BODY>
