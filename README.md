@@ -52,11 +52,11 @@ Static Port Forwarding
 La técnica de `static port forwarding` consiste en redirigir el tráfico de un puerto de la red interna a un puerto de la red externa. Para ello, se ha creado un tunel SSH entre la máquina A y la máquina B. Para ello, se ha ejecutado el siguiente comando en la máquina A:
 
 ```bash
-ssh -4NT -L 0.0.0.0:<port>:192.168.20.5:23 seed@192.168.20.99
+ssh -4NT -L 0.0.0.0:4444:192.168.20.5:23 seed@192.168.20.99
 ```
 
 ### Pregunta 1
-Cuántas conexiones TCP hay en todo este proceso.
+¿Cuántas conexiones TCP hay en todo este proceso?
 
 Mediante la herramienta `tcpdump` se ha podido comprobar el número de conexiones TCP que se establecen durante el proceso de `static port forwarding`. Tras ejecutar el comando `tcpdump` en la máquina A, se ha podido comprobar que se establecen 2 conexiones TCP:
 
@@ -67,11 +67,13 @@ listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
 22:31:07.622591 IP A-10.8.0.99.net-10.8.0.0.41490 > B-192.168.20.99.net-192.168.20.0.ssh: Flags [S], seq 4005893999, win 64240, options [mss 1460,sackOK,TS val 402824571 ecr 0,nop,wscale 7], length 0
 22:31:07.622840 IP B-192.168.20.99.net-192.168.20.0.ssh > A-10.8.0.99.net-10.8.0.0.41490: Flags [S.], seq 3721002126, ack 4005894000, win 65160, options [mss 1460,sackOK,TS val 3505122926 ecr 402824571,nop,wscale 7], length 0
 ```
+> **Note**
+> La opción `tcp[13] &2 != 0` filtra sólo aquellos paquetes con cabecera `SYN`, que sólo aparece durante el establecimiento de una conexión `TCP`.
 
 A continuación se ha ejecutado un telnet a localhost para comprobar que el tunel SSH funciona correctamente y consigue conectarse a la maquina B1
 
 ```bash
-[10/19/22]seed@VM:~/.../Labsetup$ telnet localhost <port>
+[10/19/22]seed@VM:~/.../Labsetup$ telnet localhost 4444
 Trying 127.0.0.1...
 Connected to localhost.
 Escape character is '^]'.
@@ -84,7 +86,7 @@ Password: ****
 
 ¿Por qué este túnel puede ayudar con éxito a los usuarios a evadir la regla del cortafuegos especificada en la configuración del laboratorio?
 
-Esto puede ser útil porque el usuario puede acceder a la máquina en la red interna sin tener que pasar por el firewall. Esto se debe a que el usuario se conecta a la máquina en la red interna a través del túnel SSH.
+Esto puede ser útil porque el usuario puede acceder a la máquina en la red interna sin que el firewall bloquee el tráfico. Esto se debe a que el usuario se conecta a la máquina en la red interna a través del túnel SSH, y dado que el firewall permite este tipo de tráfico, se puede evadir la regla del firewall que bloquea el resto de conexiones.
 
 ## Tarea 2
 Dynamic Port Forwarding
@@ -98,7 +100,7 @@ Para activar el `dynamic port forwarding` se ha ejecutado el siguiente comando e
 ssh -4NT -D 0.0.0.0:4444 seed@10.8.0.99
 ```
 
-Si ahora intentamos acceder a la página de google desde la máquina A, se puede ver que no nos llega el trafico debido a que **no** hemos usado el **proxy SOCKS5**
+Si ahora intentamos acceder a la página de google desde la máquina A, se puede ver que no nos llega el tráfico debido a que **no** hemos usado el **proxy SOCKS5**
 ```
 root@a26cecbc2fd5:/# curl 40.89.244.232 -m 3
 curl: (28) Connection timed out after 3001 milliseconds
@@ -143,7 +145,7 @@ tcpdump -i eth0 'tcp[13] &2 != 0' -n -s 0 -w output.pcap
 ```
 
 ```bash	
-root@a26cecbc2fd5:/# tcpdump -i eth0 'tcp[13] &2 != 0'
+root@a26cecbc2fd5:/$ tcpdump -i eth0 'tcp[13] &2 != 0'
 tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
 listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
 10:54:58.846947 IP 192.168.20.1.58802 > a26cecbc2fd5.4444: Flags [S], seq 3801517113, win 64240, options [mss 1460,sackOK,TS val 3286071150 ecr 0,nop,wscale 7], length 0
@@ -156,7 +158,7 @@ listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
 10:55:08.801652 IP a26cecbc2fd5.4444 > 192.168.20.1.58814: Flags [S.], seq 1732189123, ack 10207536, win 65160, options [mss 1460,sackOK,TS val 3129393383 ecr 3286081105,nop,wscale 7], length 0
 ```
 
-No aparecen paquetes de conexion ni de trafico hacia duckduckgo pq va todo tunelizado
+No aparecen paquetes de conexión ni de trafico hacia duckduckgo porqu va todo tunelizado
 ```
 root@378ae553ce7f:/# tcpdump -i eth1 'tcp[13] &2 != 0'
 tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
