@@ -6,7 +6,7 @@ author_2: "Darío Marcos Casalé (795306)"
 
 # Firewall Evasion
 
-> **Warning:**
+> **Warning**
 > Las trazas de ejecución mostradas a continuación pueden contener hostnames distintos para las mismas máquinas en distintos experimentos. Esto se debe a que durante la realización de los experimentos se relanzaron varias veces los contenedores de docker, y por tanto, los hostnames cambiaron.
 
 ## Requisitos
