@@ -6,6 +6,9 @@ author_2: "Darío Marcos Casalé (795306)"
 
 # Firewall Evasion
 
+> **Warning:**
+> Las trazas de ejecución mostradas a continuación pueden contener hostnames distintos para las mismas máquinas en distintos experimentos. Esto se debe a que durante la realización de los experimentos se relanzaron varias veces los contenedores de docker, y por tanto, los hostnames cambiaron.
+
 ## Requisitos
 Lab Setup
 
@@ -100,13 +103,13 @@ Para activar el `dynamic port forwarding` se ha ejecutado el siguiente comando e
 ssh -4NT -D 0.0.0.0:4444 seed@10.8.0.99
 ```
 
-Si ahora intentamos acceder a la página de google desde la máquina A, se puede ver que no nos llega el tráfico debido a que **no** hemos usado el **proxy SOCKS5**
+Si ahora intentamos acceder a la página de google desde la máquina A, se puede ver que no nos llega el tráfico debido a que **no** hemos usado el **proxy SOCKS5**.
 ```
 root@a26cecbc2fd5:/# curl 40.89.244.232 -m 3
 curl: (28) Connection timed out after 3001 milliseconds
 ```
 
-Al usar el **proxy SOCKS5**, el tráfico se redirige correctamente
+Al usar el **proxy SOCKS5**, el tráfico se redirige correctamente.
 ```
 root@a26cecbc2fd5:/# curl --proxy socks5h://192.168.20.99:4444 40.89.244.232
 <html>
@@ -118,15 +121,19 @@ root@a26cecbc2fd5:/# curl --proxy socks5h://192.168.20.99:4444 40.89.244.232
 </html>
 ```
 
+Cabe destacar que el comportamiento es idéntico si se ejecuta el comando en la máquina B1 y B2.
+
 --- 
 
-Para demostrar que no se permite el tráfico a menos que tengamos el tunel entre A y B establecido, se han ejecutado los siguientes comandos en la máquina A:
+Para demostrar que no se permite el tráfico a menos que tengamos el túnel entre A y B establecido, se han ejecutado los siguientes comandos en la máquina A:
 
+- Sin túnel
 ```
 root@8f394f60982b:/$ curl --proxy socks5h://192.168.20.99:4444 google.com
 curl: (7) Failed to connect to 192.168.20.99 port 4444: Connection refused
 ```
 
+- Con túnel
 ```
 root@8f394f60982b:/$ curl --proxy socks5h://192.168.20.99:4444 google.com
 <HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
@@ -140,27 +147,17 @@ The document has moved
 ### Tarea 2.2
 Testing the Tunnel Using Browser
 
-```bash	
-tcpdump -i eth0 'tcp[13] &2 != 0' -n -s 0 -w output.pcap
-```
+Para comprobar el comportamiento relativo al túnel `SSH` se ha empleado la utilidad `tcpdump` para capturar el tráfico. Es de especial relevancia comprobar si se crean conexiones abiertas, por lo que se filtrarán sólo aquellos paquetes `SYN`.
 
 ```bash	
-root@a26cecbc2fd5:/$ tcpdump -i eth0 'tcp[13] &2 != 0'
-tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
-listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
-10:54:58.846947 IP 192.168.20.1.58802 > a26cecbc2fd5.4444: Flags [S], seq 3801517113, win 64240, options [mss 1460,sackOK,TS val 3286071150 ecr 0,nop,wscale 7], length 0
-10:54:58.846975 IP a26cecbc2fd5.4444 > 192.168.20.1.58802: Flags [S.], seq 2456604960, ack 3801517114, win 65160, options [mss 1460,sackOK,TS val 3129383428 ecr 3286071150,nop,wscale 7], length 0
-10:54:58.918391 IP 192.168.20.1.58806 > a26cecbc2fd5.4444: Flags [S], seq 1690393414, win 64240, options [mss 1460,sackOK,TS val 3286071221 ecr 0,nop,wscale 7], length 0
-10:54:58.918420 IP a26cecbc2fd5.4444 > 192.168.20.1.58806: Flags [S.], seq 2817506843, ack 1690393415, win 65160, options [mss 1460,sackOK,TS val 3129383499 ecr 3286071221,nop,wscale 7], length 0
-10:55:08.060662 IP 192.168.20.1.58810 > a26cecbc2fd5.4444: Flags [S], seq 3394860571, win 64240, options [mss 1460,sackOK,TS val 3286080364 ecr 0,nop,wscale 7], length 0
-10:55:08.060684 IP a26cecbc2fd5.4444 > 192.168.20.1.58810: Flags [S.], seq 1601240667, ack 3394860572, win 65160, options [mss 1460,sackOK,TS val 3129392642 ecr 3286080364,nop,wscale 7], length 0
-10:55:08.801615 IP 192.168.20.1.58814 > a26cecbc2fd5.4444: Flags [S], seq 10207535, win 64240, options [mss 1460,sackOK,TS val 3286081105 ecr 0,nop,wscale 7], length 0
-10:55:08.801652 IP a26cecbc2fd5.4444 > 192.168.20.1.58814: Flags [S.], seq 1732189123, ack 10207536, win 65160, options [mss 1460,sackOK,TS val 3129393383 ecr 3286081105,nop,wscale 7], length 0
+tcpdump -i eth0 'tcp[13] &2 != 0'
 ```
 
-No aparecen paquetes de conexión ni de trafico hacia duckduckgo porqu va todo tunelizado
-```
-root@378ae553ce7f:/# tcpdump -i eth1 'tcp[13] &2 != 0'
+No aparecen paquetes de conexión hacia duckduckgo debido a que todo el tráfico va tunelizado y la conexión se ha realizado previamente al establecer el túnel SSH.
+
+`Máquina Router(Firewall)`
+```bash
+root@378ae553ce7f:/$ tcpdump -i eth1 'tcp[13] &2 != 0'
 tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
 listening on eth1, link-type EN10MB (Ethernet), capture size 262144 bytes
 ^C
@@ -169,19 +166,16 @@ listening on eth1, link-type EN10MB (Ethernet), capture size 262144 bytes
 0 packets dropped by kernel
 ```
 
-### Tarea 2.3 (OPCIONAL)
-Writing a SOCKS Client Using Python
-
 ## Tarea 3
 Virtual Private Network (VPN)
 
 ### Tarea 3.1
 Bypassing Ingress Firewall
 
-Lanzar el túnel para saltar el firewall en el cliente VPN:
-A(client) -> B(server)
+En primer lugar, es necesario establecer el túnel SSH en el cliente VPN para poder evadir el firewall.
+`A(VPN Client) -> B(VPN Server)`
 ```bash
-ssh -w 0:0 root@192.168.20.99\
+ssh -w 0:0 root@192.168.20.99 \
     -o "PermitLocalCommand=yes" \
     -o "LocalCommand= ip addr add 192.168.53.88/24 dev tun0 && \
     ip link set tun0 up" \
@@ -189,24 +183,32 @@ ssh -w 0:0 root@192.168.20.99\
     ip link set tun0 up"
 ```
 
-En el lado del cliente:
+A continuación, se debe modificar la configuración de enrutamiento del cliente VPN para que todo el tráfico dirigido a la red B pase a través del interfaz virtual `tun0`. Además, el tráfico con destino a la máquina B debe pasar por el firewall:
 ```bash
 ip route replace 192.168.20.0/24 via 192.168.53.88 dev tun0
 ip route add 192.168.20.99 via 10.8.0.11
 ```
 
-En el lado del servidor:
+En el lado del servidor es necesario activar el enmascaramiento dinámico para todo el tráfico saliente del servidor VPN:
 ```bash
 iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
 ```
 
+Una vez realizado el enrutamiento, se puede comprobar que el tráfico se dirige correctamente a la máquina B. Para hacer la prueba se ha realizado un telnet a la máquina B1 desde la máquina A mediante el cliente VPN.
+
 ```
-telnet 192.168.53.88
+root@486738e12260:/# telnet 192.168.20.5
+Trying 192.168.20.5...
+Connected to 192.168.20.5.
+Escape character is '^]'.
+Ubuntu 20.04.1 LTS
+522f60eaa459 login: seed
+Password: 
+Welcome to Ubuntu 20.04.1 LTS (GNU/Linux 5.4.0-54-generic x86_64)
+...
 ```
 
-```bash
-ip route add 192.168.20.0/24 via 192.168.53.88 dev tun0
-```
+Cabe destacar que el comportamiento es idéntico si se intenta hacer telnet a cualquier otro nodo de la red interna (B, B1, B2)
 
 ### Tarea 3.2
 Bypassing Egress Firewall
@@ -214,16 +216,7 @@ Bypassing Egress Firewall
 > **Warning**
 > Volver a lanzar los contenedores para resetear la configuración de red del apartado 3.1
 
-```bash
-
-`A`: VPN Server
-`B`: VPN Client 
-
-```bash	
-iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
-```
-
-A(server) -> B(client)
+`A(VPN Server) <- B(VPN Client)`
 ```bash
 ssh -w 0:0 root@10.8.0.99 \
     -o "PermitLocalCommand=yes" \
@@ -235,7 +228,7 @@ ssh -w 0:0 root@10.8.0.99 \
 
 En el lado del cliente:
 ```
-ip route add 52.142.124.215 dev tun0
+ip route add 52.142.124.215 via 192.168.53.88/24 dev tun0
 ```
 
 En el lado del servidor:
@@ -243,9 +236,26 @@ En el lado del servidor:
 iptables -t nat -A POSTROUTING -j MASQUERADE -o eth0
 ```
 
-## Tarea 4
-Comparing SOCKS5 Proxy and VPN
+Para comprobar que el funcionamiento de la VPN es correcto, se ha realizado una petición a alguna de las páginas bloqueadas (en este caso google.com)
 
-## Conclusiones
+```
+root@444234a44134:/# curl 142.250.217.78
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+<TITLE>301 Moved</TITLE></HEAD><BODY>
+<H1>301 Moved</H1>
+The document has moved
+<A HREF="http://www.google.com/">here</A>.
+</BODY></HTML>
+```
+
+## Tarea 4
+
+### Conclusiones
+
+Como comparación, se ha realizado una serie de pruebas con el protocolo `OpenVPN` y otras usando el `proxy SOCKS5` de tal manera que se pueda comprobar el comportamiento de cada uno de ellos.
+
+Tras completar la práctica, hemos podido comprobar que tanto el protocolo `OpenVPN` como el `proxy SOCKS5` nos permiten realizar la técnica de Firewall Evasion. Sin embargo, a nuestro parecer, el protocolo `SOCKS5` es mucho menos complejo a la hora de configurar el túnel, por lo que es mucho más sencillo de implementar.
 
 ## Referencias 
+
+- [VPN Masquerade HOWTO](https://tldp.org/HOWTO/VPN-Masquerade-HOWTO-2.html)
