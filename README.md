@@ -228,7 +228,7 @@ ssh -w 0:0 root@10.8.0.99 \
 
 En el lado del cliente:
 ```
-ip route add 52.142.124.215 via 192.168.53.88/24 dev tun0
+ip route add 52.142.124.215 dev tun0
 ```
 
 En el lado del servidor:
